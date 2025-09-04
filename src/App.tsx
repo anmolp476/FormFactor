@@ -1,35 +1,68 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useRef, useEffect } from "react";
+import {
+  createDetector,
+  SupportedModels,
+  movenet,
+} from "@tensorflow-models/pose-detection";
+import * as tf from "@tensorflow/tfjs";
+import "@tensorflow/tfjs-backend-webgl"; // This one's
+import "@tensorflow/tfjs-backend-webgpu"; // We just doing this so the code doesn't freak out
 
-function App() {
-  const [count, setCount] = useState(0)
+export default function App() {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  useEffect(() => {
+    const setupCamera = async () => {
+      if (!videoRef.current) return;
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      videoRef.current.srcObject = stream;
+      await videoRef.current.play();
+    };
+
+    const runPoseDetection = async () => {
+      await tf.setBackend("webgl"); // force stable backend
+      await tf.ready();
+      console.log("TF backend ready:", tf.getBackend());
+
+      const detector = await createDetector(
+        SupportedModels.MoveNet,
+        {
+          modelType: movenet.modelType.SINGLEPOSE_LIGHTNING,
+        }  
+      );
+      console.log("Detector created:", detector);
+
+
+      const detectPose = async () => {
+        console.log("Running pose detection loop...");
+        if (!videoRef.current) return;
+        const poses = await detector.estimatePoses(videoRef.current);
+        if (poses.length > 0) {
+          console.log(poses[0].keypoints); // 👀 log keypoints for now
+        }
+        requestAnimationFrame(detectPose);
+      };
+
+      detectPose();
+    };
+
+    setupCamera().then(runPoseDetection);
+  }, []);
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <div className="flex flex-col items-center justify-center h-screen bg-gray-100">
+      <h1 className="text-3xl font-bold text-blue-600 mb-4">
+        Fitness Tracker MVP
+      </h1>
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        muted
+        className="border-2 border-black rounded-md"
+        width={640}
+        height={480}
+      />
+    </div>
+  );
 }
-
-export default App
