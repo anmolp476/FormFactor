@@ -34,7 +34,6 @@ export default function App() {
 
 
       const detectPose = async () => {
-        console.log("Running pose detection loop...");
         if (!videoRef.current) return;
         const poses = await detector.estimatePoses(videoRef.current);
         if (poses.length > 0) {
@@ -52,7 +51,7 @@ export default function App() {
   return (
     <div className="flex flex-col items-center justify-center h-screen bg-gray-100">
       <h1 className="text-3xl font-bold text-blue-600 mb-4">
-        Fitness Tracker MVP
+        Form Factor
       </h1>
       <video
         ref={videoRef}
